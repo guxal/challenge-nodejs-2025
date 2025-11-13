@@ -341,6 +341,206 @@ npm run format         # Formatear código
 - Verifica que las variables de entorno de test estén configuradas
 - Ejecuta `npm install` para asegurar dependencias actualizadas
 
+## Preguntas adicionales
+
+### 1️⃣ ¿Cómo desacoplarías la lógica de negocio del framework NestJS?
+
+Yo intentaría que Nest sea solo “el delivery mechanism” (HTTP, pipes, filtros, etc.) y que la lógica de negocio viva en capas puras, sin depender de decoradores ni clases de Nest.
+
+En concreto:
+
+Modelo de dominio y servicios de dominio puros
+
+Definir entidades y servicios que no importen nada de @nestjs/*.
+
+Ejemplo: una clase OrderDomainService con métodos como:
+
+createOrder()
+
+advanceStatus(order)
+
+Esta clase trabaja con tipos/entidades del dominio (Order, OrderItem) y lanza errores propios del dominio, no HttpException.
+
+Patrón Ports & Adapters (Hexagonal)
+
+Definir ports (interfaces) para infra:
+
+OrdersRepositoryPort
+
+OrderCachePort
+
+Y luego implementar adapters concretos con Nest/Sequelize/Redis:
+
+SequelizeOrdersRepository implements OrdersRepositoryPort
+
+RedisOrdersCache implements OrderCachePort
+
+El servicio de dominio solo conoce las interfaces, no las implementaciones.
+
+Services Nest como orquestadores
+
+El OrdersService de Nest se convierte en una fina capa de orquestación:
+
+Recibe DTOs.
+
+Llama al servicio de dominio.
+
+Traduce errores de dominio a HTTP (por ejemplo, OrderNotFoundError → 404).
+
+Esto facilita:
+
+Testear lógica de negocio sin levantar Nest.
+
+Reutilizar la lógica en otros canales (cola, CLI, gRPC) sin reescribir.
+
+Separar DTOs / validación de modelos de dominio
+
+Los DTOs (CreateOrderDto) son solo para la capa web.
+
+El dominio puede usar sus propios tipos/clases (OrderProps), evitando que class-validator entre en esa capa.
+
+### 2️⃣ ¿Cómo escalarías esta API para soportar miles de órdenes concurrentes?
+
+La idea es hacer la API stateless, con buen uso de BD, cache y observabilidad.
+
+Escalado horizontal de la app
+
+Contenerizada con Docker y orquestada con Kubernetes / ECS / similar.
+
+Varios pods/instancias detrás de un load balancer.
+
+La app no guarda estado en memoria (todo en Postgres / Redis).
+
+Optimización de base de datos
+
+Índices adecuados:
+
+Por ejemplo: índice en status, createdAt.
+
+Ajustar el connection pool (máx conexiones por instancia).
+
+Para lecturas intensivas:
+
+Read replicas de Postgres.
+
+Estrategias tipo CQRS light (lecturas separadas de escrituras cuando tenga sentido).
+
+Uso intensivo de cache
+
+Redis para:
+
+Lista de órdenes no entregadas (GET /orders).
+
+Detalles de órdenes muy consultadas (GET /orders/:id opcional).
+
+TTL corto (30s–60s) para balancear frescura vs rendimiento.
+
+Esto reduce de forma brutal la presión sobre Postgres.
+
+Trabajos async & colas (si el volumen crece mucho)
+
+Si más adelante hay operaciones pesadas (ej. notificaciones, auditoría):
+
+Usar una cola tipo Bull / RabbitMQ / Kafka.
+
+La API recibe la orden y encola tareas no críticas.
+
+Esto reduce el tiempo de respuesta y mejora la experiencia.
+
+Observabilidad y autoescalado
+
+Métricas:
+
+Latencia, RPS, errores 5xx, conexiones a DB.
+
+Auto-scaling (HPA) basado en:
+
+CPU
+
+Latencia p95
+
+Longitud de colas (si se usan).
+
+Logs centralizados + tracing (ej. OpenTelemetry) para detectar cuellos de botella.
+
+Buenas prácticas de API
+
+Idempotencia en operaciones sensibles.
+
+Timeouts y circuit breakers en llamadas externas.
+
+Rate limiting / throttling en el gateway si es necesario.
+
+### 3️⃣ ¿Qué ventajas ofrece Redis en este caso y qué alternativas considerarías?
+
+Ventajas de Redis en este reto:
+
+Latencia muy baja para lecturas repetidas
+
+GET /orders es una lectura muy típica que se puede cachear.
+
+Redis responde en micro/milis, mucho más rápido que ir siempre a Postgres.
+
+Menos carga en la base de datos
+
+Cada request que se responde desde cache no toca Postgres.
+
+Esto permite que la DB se concentre en escrituras y consultas no cacheables.
+
+TTL y control fino del cache
+
+Fácil decir “esto vive 30s y luego se invalida”.
+
+Ideal para datos con alta frecuencia de lectura y cambios frecuentes.
+
+Flexibilidad y tipos de datos
+
+Podemos usar strings ahora, pero Redis también soporta listas, sets, hashes, pub/sub, etc.
+
+Si el sistema crece, podríamos usar:
+
+Pub/Sub para notificar cambios de órdenes.
+
+Streams para eventos.
+
+Alternativas que consideraría:
+
+Memcached
+
+Otra opción de cache en memoria distribuido.
+
+Muy rápido y simple, pero:
+
+Sin tipos avanzados, sin persistencia.
+
+Menos flexible que Redis.
+
+Cache en la capa de API Gateway / CDN
+
+Si hubiera un API Gateway o CDN delante:
+
+Cache de respuestas HTTP por path y querystring.
+
+Útil para GET /orders, pero menos granular que Redis (y más complicado de invalidar por negocio).
+
+In-memory cache local (por proceso)
+
+Ej. node-cache, en memoria del proceso.
+
+Sirve para entornos pequeños, pero:
+
+No funciona bien con múltiples instancias (cada una tendría su propio cache: inconsistente).
+
+Por eso, para un sistema escalable prefiero Redis.
+
+Soluciones administradas
+
+ElastiCache (AWS), Memorystore (GCP), Azure Cache for Redis:
+
+Son Redis o equivalentes como servicio administrado.
+
+Misma idea, pero sin gestionar servidores.
+
 ## License
 
 [MIT licensed](LICENSE)
