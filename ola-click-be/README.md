@@ -1,98 +1,346 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Ola Click API
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+API REST para gestión de pedidos desarrollada con NestJS, PostgreSQL, Redis y Sequelize.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Descripción
 
-## Description
+Sistema de gestión de pedidos que permite crear, consultar y avanzar el estado de pedidos. Los pedidos pueden tener tres estados: `initiated`, `sent` y `delivered`. Una vez entregados, los pedidos se eliminan automáticamente de la base de datos.
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Requisitos Previos
 
-## Project setup
+- Docker y Docker Compose instalados
+- Node.js 20+ (si ejecutas localmente sin Docker)
 
+## Instalación y Ejecución
+
+### Opción 1: Docker Compose (Recomendado)
+
+1. **Clonar el repositorio y navegar al directorio:**
 ```bash
-$ npm install
+cd ola-click-be
 ```
 
-## Compile and run the project
-
-```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+2. **Crear archivo `.env` con las siguientes variables:**
+```env
+DB_HOST=postgres
+DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD=postgres
+DB_NAME=restaurant
+REDIS_HOST=redis
+REDIS_PORT=6379
+APP_PORT=3000
 ```
 
-## Run tests
-
+3. **Levantar los servicios:**
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+docker-compose up -d
 ```
 
-## Deployment
+Esto iniciará:
+- PostgreSQL en el puerto `5432`
+- Redis en el puerto `6379`
+- La aplicación NestJS en el puerto `3000`
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
+4. **Verificar que todo esté corriendo:**
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+docker-compose ps
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+5. **Ver los logs de la aplicación:**
+```bash
+docker-compose logs -f app
+```
 
-## Resources
+### Opción 2: Docker (Sin Docker Compose)
 
-Check out a few resources that may come in handy when working with NestJS:
+1. **Levantar PostgreSQL y Redis manualmente:**
+```bash
+docker run -d --name postgres -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=restaurant -p 5432:5432 postgres:15
+docker run -d --name redis -p 6379:6379 redis:7
+```
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+2. **Construir la imagen de la aplicación:**
+```bash
+docker build -f .docker/Dockerfile -t ola-click-be .
+```
 
-## Support
+3. **Ejecutar el contenedor:**
+```bash
+docker run -d --name app --link postgres --link redis -p 3000:3000 --env-file .env ola-click-be
+```
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+### Opción 3: Ejecución Local (Sin Docker)
 
-## Stay in touch
+1. **Instalar dependencias:**
+```bash
+npm install
+```
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+2. **Configurar variables de entorno en `.env`:**
+```env
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD=postgres
+DB_NAME=restaurant
+REDIS_HOST=localhost
+REDIS_PORT=6379
+APP_PORT=3000
+```
+
+3. **Asegurarse de tener PostgreSQL y Redis corriendo localmente**
+
+4. **Ejecutar en modo desarrollo:**
+```bash
+npm run start:dev
+```
+
+## Ejecutar Tests
+
+### Tests dentro de Docker
+
+**Tests E2E:**
+```bash
+# Opción 1: En contenedor en ejecución
+docker-compose exec app npm run test:e2e
+
+# Opción 2: Contenedor temporal
+docker-compose run --rm app npm run test:e2e
+```
+
+**Tests unitarios:**
+```bash
+docker-compose exec app npm run test
+```
+
+**Cobertura de tests:**
+```bash
+docker-compose exec app npm run test:cov
+```
+
+### Tests localmente
+
+```bash
+# Tests unitarios
+npm run test
+
+# Tests E2E
+npm run test:e2e
+
+# Cobertura
+npm run test:cov
+```
+
+## Probar Endpoints
+
+### Opción 1: Swagger UI (Recomendado)
+
+Una vez que la aplicación esté corriendo, accede a la documentación interactiva de Swagger:
+
+```
+http://localhost:3000/docs
+```
+
+Desde aquí puedes:
+- Ver todos los endpoints disponibles
+- Probar cada endpoint directamente desde el navegador
+- Ver los esquemas de request/response
+- Ejecutar peticiones y ver respuestas en tiempo real
+
+### Opción 2: cURL
+
+**1. Listar todos los pedidos pendientes:**
+```bash
+curl -X GET http://localhost:3000/orders
+```
+
+**2. Obtener un pedido por ID:**
+```bash
+curl -X GET http://localhost:3000/orders/1
+```
+
+**3. Crear un nuevo pedido:**
+```bash
+curl -X POST http://localhost:3000/orders \
+  -H "Content-Type: application/json" \
+  -d '{
+    "clientName": "Juan Pérez",
+    "items": [
+      {
+        "description": "Combo hamburguesa",
+        "quantity": 2,
+        "unitPrice": 25.5
+      },
+      {
+        "description": "Bebida",
+        "quantity": 1,
+        "unitPrice": 5.0
+      }
+    ]
+  }'
+```
+
+**4. Avanzar el estado de un pedido:**
+```bash
+# De 'initiated' a 'sent'
+curl -X POST http://localhost:3000/orders/1/advance
+
+# De 'sent' a 'delivered' (el pedido se eliminará)
+curl -X POST http://localhost:3000/orders/1/advance
+```
+
+### Opción 3: Postman
+
+1. **Importar colección:**
+   - Abre Postman
+   - Crea una nueva colección llamada "Ola Click API"
+   - Agrega las siguientes requests:
+
+2. **GET - Listar pedidos:**
+   - Method: `GET`
+   - URL: `http://localhost:3000/orders`
+
+3. **GET - Obtener pedido:**
+   - Method: `GET`
+   - URL: `http://localhost:3000/orders/:id`
+   - Variables: `id = 1`
+
+4. **POST - Crear pedido:**
+   - Method: `POST`
+   - URL: `http://localhost:3000/orders`
+   - Headers: `Content-Type: application/json`
+   - Body (raw JSON):
+   ```json
+   {
+     "clientName": "Juan Pérez",
+     "items": [
+       {
+         "description": "Combo hamburguesa",
+         "quantity": 2,
+         "unitPrice": 25.5
+       }
+     ]
+   }
+   ```
+
+5. **POST - Avanzar estado:**
+   - Method: `POST`
+   - URL: `http://localhost:3000/orders/:id/advance`
+   - Variables: `id = 1`
+
+## Endpoints Disponibles
+
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| GET | `/orders` | Lista todos los pedidos pendientes (no entregados) |
+| GET | `/orders/:id` | Obtiene un pedido específico por ID |
+| POST | `/orders` | Crea un nuevo pedido |
+| POST | `/orders/:id/advance` | Avanza el estado del pedido (initiated → sent → delivered) |
+
+## Consideraciones Técnicas
+
+### Arquitectura
+
+- **Framework:** NestJS 11
+- **Base de datos:** PostgreSQL 15 con Sequelize ORM
+- **Cache:** Redis 7 para cacheo de consultas
+- **Validación:** class-validator y class-transformer
+- **Documentación:** Swagger/OpenAPI
+
+### Estados de Pedidos
+
+Los pedidos tienen tres estados posibles:
+- `initiated`: Pedido creado, pendiente de envío
+- `sent`: Pedido enviado, en camino
+- `delivered`: Pedido entregado (se elimina automáticamente)
+
+### Cache
+
+- La lista de pedidos se cachea en Redis por 30 segundos
+- El cache se invalida automáticamente al crear o actualizar pedidos
+- Los pedidos entregados no aparecen en la lista (filtro en base de datos)
+
+### Base de Datos
+
+- **Tablas:**
+  - `orders`: Almacena información de pedidos
+  - `order_items`: Almacena los ítems de cada pedido
+- **Relaciones:** Un pedido tiene muchos ítems (1:N)
+- **Sincronización:** `synchronize: true` en desarrollo (crea tablas automáticamente)
+
+### Validaciones
+
+- `clientName`: Requerido, string no vacío
+- `items`: Array requerido con al menos un ítem
+- Cada ítem requiere:
+  - `description`: String no vacío
+  - `quantity`: Entero mayor a 0
+  - `unitPrice`: Número mayor o igual a 0
+
+### Manejo de Errores
+
+- `404 Not Found`: Cuando un pedido no existe
+- `400 Bad Request`: Cuando la validación falla
+- Validación automática de tipos y formatos
+
+### Variables de Entorno
+
+Asegúrate de configurar correctamente:
+- `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`: Configuración de PostgreSQL
+- `REDIS_HOST`, `REDIS_PORT`: Configuración de Redis
+- `APP_PORT`: Puerto donde corre la aplicación (default: 3000)
+
+### Docker
+
+- El Dockerfile usa Node.js 20 Alpine para una imagen ligera
+- Multi-stage build para optimizar el tamaño
+- Volúmenes para desarrollo (opcional)
+
+## Scripts Disponibles
+
+```bash
+# Desarrollo
+npm run start:dev      # Modo watch
+npm run start:debug    # Modo debug
+
+# Producción
+npm run build          # Compilar
+npm run start:prod     # Ejecutar compilado
+
+# Testing
+npm run test           # Tests unitarios
+npm run test:watch     # Tests en modo watch
+npm run test:e2e       # Tests end-to-end
+npm run test:cov       # Cobertura de código
+
+# Calidad de código
+npm run lint           # Linter con auto-fix
+npm run format         # Formatear código
+```
+
+## Troubleshooting
+
+**Error de conexión a PostgreSQL:**
+- Verifica que el contenedor de PostgreSQL esté corriendo: `docker-compose ps`
+- Revisa las variables de entorno en `.env`
+- Verifica los logs: `docker-compose logs postgres`
+
+**Error de conexión a Redis:**
+- Verifica que el contenedor de Redis esté corriendo: `docker-compose ps`
+- Revisa las variables de entorno en `.env`
+- Verifica los logs: `docker-compose logs redis`
+
+**La aplicación no inicia:**
+- Revisa los logs: `docker-compose logs app`
+- Verifica que todas las dependencias estén corriendo
+- Asegúrate de que el puerto 3000 no esté en uso
+
+**Tests fallan:**
+- Asegúrate de que PostgreSQL y Redis estén corriendo
+- Verifica que las variables de entorno de test estén configuradas
+- Ejecuta `npm install` para asegurar dependencias actualizadas
 
 ## License
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+[MIT licensed](LICENSE)

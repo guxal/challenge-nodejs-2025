@@ -3,6 +3,8 @@ import { ConfigModule } from '@nestjs/config';
 import { SequelizeModule } from '@nestjs/sequelize';
 import { OrdersModule } from './orders/orders.module';
 import { RedisModule } from './redis/redis.module';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
 
 @Module({
   imports: [
@@ -25,5 +27,7 @@ import { RedisModule } from './redis/redis.module';
     RedisModule,
     OrdersModule,
   ],
+  controllers: [AppController],
+  providers: [AppService],
 })
 export class AppModule {}
