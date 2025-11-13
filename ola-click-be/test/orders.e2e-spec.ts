@@ -1,9 +1,12 @@
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { SequelizeModule } from '@nestjs/sequelize';
+import { getModelToken } from '@nestjs/sequelize';
 import request from 'supertest';
 import { OrdersModule } from '../src/orders/orders.module';
 import { RedisService } from '../src/redis/redis.service';
+import { Order } from '../src/orders/entities/order.entity';
+import { OrderItem } from '../src/orders/entities/order-item.entity';
 
 class RedisServiceMock {
   private store = new Map<string, string>();
@@ -23,6 +26,8 @@ class RedisServiceMock {
 
 describe('Orders API (e2e)', () => {
   let app: INestApplication;
+  let orderModel: typeof Order;
+  let orderItemModel: typeof OrderItem;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -42,7 +47,15 @@ describe('Orders API (e2e)', () => {
       .compile();
 
     app = moduleFixture.createNestApplication();
+    orderModel = moduleFixture.get<typeof Order>(getModelToken(Order));
+    orderItemModel = moduleFixture.get<typeof OrderItem>(getModelToken(OrderItem));
     await app.init();
+  });
+
+  beforeEach(async () => {
+    // Limpiar la base de datos antes de cada test
+    await orderItemModel.destroy({ where: {}, force: true });
+    await orderModel.destroy({ where: {}, force: true });
   });
 
   afterAll(async () => {
